@@ -1,22 +1,25 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-USER $APP_UID
+﻿# Use runtime image for final container
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080
-EXPOSE 8081
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+# Use SDK to build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["ShortenURL/ShortenURL.csproj", "ShortenURL/"]
-RUN dotnet restore "ShortenURL/ShortenURL.csproj"
+
+COPY ["ShortenURL.csproj", "."]
+RUN dotnet restore "ShortenURL.csproj"
+
 COPY . .
-WORKDIR "/src/ShortenURL"
-RUN dotnet build "./ShortenURL.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src"
+RUN dotnet build "ShortenURL.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
+# Publish
 FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./ShortenURL.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "ShortenURL.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
+# Final image
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
